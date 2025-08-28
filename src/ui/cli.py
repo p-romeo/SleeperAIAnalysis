@@ -2,7 +2,6 @@
 
 import os
 import sys
-import getpass
 from typing import Optional, List, Dict, Any
 
 from src.core.optimizer import LineupOptimizer
@@ -20,7 +19,6 @@ class CLIInterface:
         """Initialize CLI interface."""
         self.optimizer = LineupOptimizer()
         self.config_manager = ConfigManager()
-        self.password: Optional[str] = None
         
         logger.info("CLI Interface initialized")
     
@@ -67,7 +65,7 @@ class CLIInterface:
             except KeyboardInterrupt:
                 return None
     
-    def setup_initial_config(self) -> Optional[str]:
+    def setup_initial_config(self) -> bool:
         """Initial setup for first-time users."""
         self.print_header()
         print(Colors.bold("Welcome! Let's set up your configuration.\n"))
@@ -80,16 +78,16 @@ class CLIInterface:
         
         choice = self.get_user_choice(3, "\nEnter choice (1-3): ")
         if choice is None:
-            return None
+            return False
         
         if choice == 1:
             provider = "openai"
             print("\nYou'll need an OpenAI API key from https://platform.openai.com/api-keys")
-            api_key = getpass.getpass("Enter OpenAI API Key: ").strip()
+            api_key = input("Enter OpenAI API Key: ").strip()
         elif choice == 2:
             provider = "anthropic"
             print("\nYou'll need an Anthropic API key from https://console.anthropic.com/")
-            api_key = getpass.getpass("Enter Anthropic API Key: ").strip()
+            api_key = input("Enter Anthropic API Key: ").strip()
         else:
             provider = "mock"
             api_key = "mock_key"
@@ -99,21 +97,12 @@ class CLIInterface:
         username = input("\nEnter your Sleeper username: ").strip()
         if not username:
             print(Colors.error("Username is required!"))
-            return None
+            return False
         
         # Get FantasyPros API key (optional)
         print("\nFantasyPros API key is optional but provides better projections.")
         print("Get one at: https://www.fantasypros.com/apis/")
         fantasypros_key = input("Enter FantasyPros API key (or press Enter to skip): ").strip()
-        
-        # Create password for config encryption
-        password = getpass.getpass("\nCreate a password to encrypt your settings: ")
-        confirm = getpass.getpass("Confirm password: ")
-        
-        while password != confirm:
-            print(Colors.error("Passwords don't match! Try again."))
-            password = getpass.getpass("Create a password to encrypt your settings: ")
-            confirm = getpass.getpass("Confirm password: ")
         
         # Create and save configuration
         config = AppConfig(
@@ -124,33 +113,30 @@ class CLIInterface:
         )
         
         try:
-            self.config_manager.save_config(config, password)
+            self.config_manager.save_config(config)
             print(Colors.success("\n✓ Configuration saved successfully!"))
-            return password
+            return True
         except Exception as e:
             print(Colors.error(f"\n✗ Failed to save configuration: {e}"))
-            return None
+            return False
     
-    def load_configuration(self) -> Optional[str]:
+    def load_configuration(self) -> bool:
         """Load existing configuration or create new."""
         if self.config_manager.config_exists():
-            self.print_header()
-            password = getpass.getpass("Enter your password: ")
-            
-            config = self.config_manager.load_config(password)
+            config = self.config_manager.load_config()
             if not config:
-                print(Colors.error("Invalid password or corrupted config!"))
-                print("1. Try again")
-                print("2. Reset configuration")
+                print(Colors.error("Configuration file is corrupted!"))
+                print("1. Reset configuration")
+                print("2. Exit")
                 
                 choice = self.get_user_choice(2, "\nEnter choice: ")
-                if choice == 2:
+                if choice == 1:
                     self.config_manager.delete_config()
                     return self.setup_initial_config()
                 else:
-                    return self.load_configuration()
+                    return False
             
-            return password
+            return True
         else:
             return self.setup_initial_config()
     
@@ -409,13 +395,12 @@ class CLIInterface:
         """Main application loop."""
         try:
             # Load configuration
-            self.password = self.load_configuration()
-            if not self.password:
+            if not self.load_configuration():
                 print(Colors.error("Failed to load configuration"))
                 return
             
             # Initialize optimizer
-            if not self.optimizer.initialize(self.password):
+            if not self.optimizer.initialize():
                 print(Colors.error("Failed to initialize optimizer"))
                 return
             

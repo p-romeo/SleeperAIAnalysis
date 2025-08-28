@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 from dataclasses import dataclass, asdict
 
-from src.utils.encryption import EncryptionManager
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -38,7 +37,7 @@ class AppConfig:
 
 
 class ConfigManager:
-    """Manages application configuration with encryption."""
+    """Manages application configuration."""
     
     def __init__(self, config_dir: Optional[Path] = None):
         """
@@ -51,30 +50,25 @@ class ConfigManager:
             config_dir = Path.home() / ".sleeper_optimizer"
         
         self.config_dir = config_dir
-        self.config_file = config_dir / "config.encrypted"
-        self.encryption_manager = EncryptionManager()
+        self.config_file = config_dir / "config.json"
         
         # Ensure config directory exists
         self.config_dir.mkdir(parents=True, exist_ok=True)
         
         logger.info(f"Config directory: {self.config_dir}")
     
-    def save_config(self, config: AppConfig, password: str) -> None:
+    def save_config(self, config: AppConfig) -> None:
         """
-        Save encrypted configuration.
+        Save configuration to JSON file.
         
         Args:
             config: Configuration to save
-            password: Password for encryption
         """
         try:
             config_dict = config.to_dict()
-            config_json = json.dumps(config_dict, indent=2)
             
-            encrypted_data = self.encryption_manager.encrypt_data(config_json, password)
-            
-            with open(self.config_file, 'wb') as f:
-                f.write(encrypted_data)
+            with open(self.config_file, 'w') as f:
+                json.dump(config_dict, f, indent=2)
             
             logger.info("Configuration saved successfully")
             
@@ -82,12 +76,9 @@ class ConfigManager:
             logger.error(f"Failed to save configuration: {e}")
             raise
     
-    def load_config(self, password: str) -> Optional[AppConfig]:
+    def load_config(self) -> Optional[AppConfig]:
         """
-        Load encrypted configuration.
-        
-        Args:
-            password: Password for decryption
+        Load configuration from JSON file.
             
         Returns:
             Configuration object or None if failed
@@ -97,11 +88,8 @@ class ConfigManager:
             return None
         
         try:
-            with open(self.config_file, 'rb') as f:
-                encrypted_data = f.read()
-            
-            decrypted_json = self.encryption_manager.decrypt_data(encrypted_data, password)
-            config_dict = json.loads(decrypted_json)
+            with open(self.config_file, 'r') as f:
+                config_dict = json.load(f)
             
             config = AppConfig.from_dict(config_dict)
             logger.info("Configuration loaded successfully")

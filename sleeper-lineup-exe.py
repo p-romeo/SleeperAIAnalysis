@@ -12,11 +12,6 @@ import time
 import requests
 from datetime import datetime
 from typing import List, Dict, Optional, Tuple
-import base64
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2
-import getpass
 
 # For colored console output
 class Colors:
@@ -34,40 +29,21 @@ class ConfigManager:
     """Manages API keys and user preferences"""
     
     def __init__(self):
-        self.config_file = "config.encrypted"
-        self.key = None
+        self.config_file = "config.json"
         
-    def get_encryption_key(self, password: str) -> bytes:
-        """Generate encryption key from password"""
-        kdf = PBKDF2(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=b'sleeper_optimizer_salt',
-            iterations=100000,
-        )
-        key = base64.urlsafe_b64encode(kdf.derive(password.encode()))
-        return key
+    def save_config(self, config: dict):
+        """Save configuration"""
+        with open(self.config_file, 'w') as file:
+            json.dump(config, file, indent=2)
     
-    def save_config(self, config: dict, password: str):
-        """Save encrypted configuration"""
-        key = self.get_encryption_key(password)
-        f = Fernet(key)
-        encrypted = f.encrypt(json.dumps(config).encode())
-        with open(self.config_file, 'wb') as file:
-            file.write(encrypted)
-    
-    def load_config(self, password: str) -> dict:
-        """Load encrypted configuration"""
+    def load_config(self) -> dict:
+        """Load configuration"""
         if not os.path.exists(self.config_file):
             return {}
         
         try:
-            key = self.get_encryption_key(password)
-            f = Fernet(key)
-            with open(self.config_file, 'rb') as file:
-                encrypted = file.read()
-            decrypted = f.decrypt(encrypted)
-            return json.loads(decrypted.decode())
+            with open(self.config_file, 'r') as file:
+                return json.load(file)
         except:
             return {}
 

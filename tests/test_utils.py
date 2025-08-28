@@ -5,7 +5,6 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 from src.utils.config import AppConfig, ConfigManager
-from src.utils.encryption import EncryptionManager
 from src.utils.logger import setup_logger
 
 
@@ -57,51 +56,6 @@ class TestAppConfig:
         assert config.cache_enabled is False
 
 
-class TestEncryptionManager:
-    """Test EncryptionManager class."""
-    
-    def test_initialization(self):
-        """Test encryption manager initialization."""
-        manager = EncryptionManager()
-        assert manager.salt == b'sleeper_optimizer_salt_v2'
-    
-    def test_custom_salt(self):
-        """Test custom salt initialization."""
-        custom_salt = b'custom_salt'
-        manager = EncryptionManager(salt=custom_salt)
-        assert manager.salt == custom_salt
-    
-    def test_derive_key(self):
-        """Test key derivation."""
-        manager = EncryptionManager()
-        password = "test_password"
-        key = manager.derive_key(password)
-        
-        assert isinstance(key, bytes)
-        assert len(key) > 0
-    
-    def test_encrypt_decrypt(self):
-        """Test encryption and decryption."""
-        manager = EncryptionManager()
-        password = "test_password"
-        data = "test_data"
-        
-        encrypted = manager.encrypt_data(data, password)
-        decrypted = manager.decrypt_data(encrypted, password)
-        
-        assert decrypted == data
-    
-    def test_verify_password(self):
-        """Test password verification."""
-        manager = EncryptionManager()
-        password = "test_password"
-        data = "test_data"
-        
-        encrypted = manager.encrypt_data(data, password)
-        
-        assert manager.verify_password(encrypted, password) is True
-        assert manager.verify_password(encrypted, "wrong_password") is False
-
 
 class TestConfigManager:
     """Test ConfigManager class."""
@@ -113,7 +67,7 @@ class TestConfigManager:
         manager = ConfigManager()
         
         assert manager.config_dir == Path("/fake/home/.sleeper_optimizer")
-        assert manager.config_file == Path("/fake/home/.sleeper_optimizer/config.encrypted")
+        assert manager.config_file == Path("/fake/home/.sleeper_optimizer/config.json")
     
     def test_validate_config_valid(self):
         """Test valid configuration validation."""
