@@ -86,8 +86,7 @@ jobs:
     
     - name: Build executable
       run: |
-        ls -la
-        pyinstaller ./sleeper_optimizer.spec --clean
+        pyinstaller sleeper_optimizer.spec --clean
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
